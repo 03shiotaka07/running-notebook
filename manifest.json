@@ -1,0 +1,16 @@
+{
+  "name": "ランニング手帖",
+  "short_name": "ラン手帖",
+  "description": "手書きの日誌感覚で走った記録をつけるランニングログ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDE8DC",
+  "theme_color": "#223148",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

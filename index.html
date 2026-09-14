@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ランニング手帖</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#223148">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ラン手帖">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDE8DC;
+    --paper-alt: #E2DACB;
+    --ink: #2B2823;
+    --ink-soft: #6B6558;
+    --indigo: #223148;
+    --tasuki: #B33C28;
+    --trail: #5C6B4F;
+    --line: #C7BEAA;
+    --card-bg: #F5F1E6;
+    --radius: 3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection{ background:var(--tasuki); color:#fff; }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    background:var(--indigo);
+    color:#EDE8DC;
+    overflow:hidden;
+    padding:34px 22px 26px;
+  }
+  .hero-contour{
+    position:absolute; inset:0; opacity:.35; pointer-events:none;
+  }
+  .hero-content{ position:relative; z-index:1; }
+  .hero-label{
+    margin:0 0 6px;
+    font-size:13px;
+    letter-spacing:.08em;
+    color:#B9C2CE;
+  }
+  .hero-number{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:64px;
+    line-height:1;
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+  }
+  .hero-number .unit{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:18px;
+    font-weight:500;
+    color:#B9C2CE;
+  }
+  .hero-stats{
+    display:flex;
+    gap:22px;
+    margin-top:14px;
+    font-size:14px;
+    color:#D9DEE3;
+  }
+  .hero-stats b{ font-weight:700; color:#fff; }
+  .hero-month-nav{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:4px;
+  }
+  .hero-month-nav button{
+    background:none; border:none; color:#B9C2CE; font-size:18px;
+    cursor:pointer; padding:2px 6px; line-height:1;
+  }
+  .hero-month-nav button:hover{ color:#fff; }
+  .hero-month-nav span{ font-size:13px; letter-spacing:.05em; }
+
+  .add-btn{
+    margin-top:20px;
+    background:var(--tasuki);
+    color:#fff;
+    border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:15px;
+    font-weight:700;
+    padding:12px 20px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    letter-spacing:.02em;
+  }
+  .add-btn:active{ transform:translateY(1px); }
+
+  .import-btn{
+    display:block;
+    margin-top:10px;
+    background:none;
+    border:1px solid rgba(237,232,220,.4);
+    color:#D9DEE3;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .import-btn:active{ transform:translateY(1px); }
+
+  /* ---------- Feed ---------- */
+  main{ padding:6px 0 60px; max-width:640px; margin:0 auto; }
+
+  .month-divider{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:26px 20px 8px;
+    border-bottom:1px solid var(--line);
+    margin:0 6px;
+  }
+  .month-divider h2{
+    font-family:'Shippori Mincho', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0;
+    color:var(--ink);
+  }
+  .month-divider .m-sum{
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+
+  .entry{
+    display:flex;
+    gap:16px;
+    padding:18px 20px;
+    margin:0 6px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .entry:active{ background:var(--paper-alt); }
+
+  .entry-date{
+    flex:0 0 46px;
+    text-align:center;
+    padding-top:2px;
+  }
+  .entry-date .d{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:26px;
+    line-height:1;
+    color:var(--indigo);
+  }
+  .entry-date .w{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  .entry-body{ flex:1; min-width:0; }
+  .entry-top{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .entry-dist{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:22px;
+    color:var(--ink);
+  }
+  .entry-dist small{ font-size:12px; font-weight:500; color:var(--ink-soft); }
+  .entry-meta{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .entry-course{
+    margin-top:6px;
+    font-size:13.5px;
+    color:var(--trail);
+    font-weight:700;
+  }
+  .entry-memo{
+    margin-top:4px;
+    font-size:13px;
+    color:var(--ink-soft);
+    font-style:italic;
+    border-left:2px solid var(--line);
+    padding-left:10px;
+    line-height:1.5;
+  }
+
+  .empty-state{
+    padding:60px 30px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+  .empty-state p{ font-size:14px; line-height:1.8; margin:0; }
+
+  /* ---------- Form overlay ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(43,40,35,.5);
+    display:flex; align-items:flex-end;
+    z-index:20;
+  }
+  .overlay.hidden{ display:none; }
+
+  .entry-form{
+    background:var(--card-bg);
+    width:100%;
+    max-height:92vh;
+    overflow-y:auto;
+    border-radius:16px 16px 0 0;
+    padding:22px 20px 28px;
+    animation:slideup .18s ease-out;
+  }
+  @keyframes slideup{ from{ transform:translateY(24px); opacity:.6; } to{ transform:translateY(0); opacity:1; } }
+
+  .form-title{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:19px;
+    margin:0 0 18px;
+    color:var(--indigo);
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    letter-spacing:.02em;
+  }
+  .field input[type=date],
+  .field input[type=number],
+  .field input[type=text],
+  .field select,
+  .field textarea{
+    width:100%;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:15px;
+    padding:10px 11px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:#fff;
+    color:var(--ink);
+  }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--indigo);
+    outline-offset:1px;
+  }
+
+  .time-row{ display:flex; gap:8px; align-items:center; }
+  .time-row .t-field{ flex:1; }
+  .time-row .t-field input{ text-align:center; }
+  .time-row .t-sep{ color:var(--ink-soft); font-size:13px; padding-top:18px; }
+
+  .pace-preview{
+    font-size:13px; color:var(--trail); margin-top:6px; min-height:16px;
+  }
+
+  .form-actions{
+    display:flex; gap:10px; margin-top:22px;
+  }
+  .form-actions button{
+    flex:1;
+    padding:13px;
+    border-radius:var(--radius);
+    font-size:15px;
+    font-weight:700;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    cursor:pointer;
+    border:none;
+  }
+  .btn-save{ background:var(--tasuki); color:#fff; }
+  .btn-cancel{ background:none; color:var(--ink-soft); border:1px solid var(--line) !important; }
+  .btn-delete{
+    display:block;
+    width:100%;
+    margin-top:12px;
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:13px;
+    text-decoration:underline;
+    padding:6px;
+    cursor:pointer;
+  }
+
+  .import-hint{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:-8px 0 16px;
+    line-height:1.6;
+  }
+  .import-row{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .import-row input[type=checkbox]{
+    margin-top:4px;
+    width:18px; height:18px;
+    accent-color:var(--tasuki);
+  }
+  .import-row .ir-main{ flex:1; }
+  .import-row .ir-date{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--indigo);
+  }
+  .import-row .ir-meta{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .import-row .ir-sport{
+    font-size:11.5px;
+    color:var(--trail);
+    font-weight:700;
+  }
+  .import-empty{
+    padding:30px 10px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    line-height:1.7;
+  }
+
+  @media (min-width:480px){
+    .hero-number{ font-size:76px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="hero">
+    <div class="hero-contour" id="contourWrap"></div>
+    <div class="hero-content">
+      <div class="hero-month-nav">
+        <button id="prevMonth" aria-label="前の月">‹</button>
+        <span id="monthLabel">2026年9月</span>
+        <button id="nextMonth" aria-label="次の月">›</button>
+      </div>
+      <p class="hero-label">走った距離</p>
+      <div class="hero-number"><span id="monthDistance">0.0</span><span class="unit">km</span></div>
+      <div class="hero-stats">
+        <div><b id="monthCount">0</b>回</div>
+        <div><b id="monthTime">0:00</b></div>
+        <div>平均 <b id="monthPace">--&apos;--&quot;</b>/km</div>
+      </div>
+      <button class="add-btn" id="addBtn">＋ 記録を書く</button>
+      <button class="import-btn" id="importBtn">Google Fitから読み込む</button>
+      <input type="file" id="importInput" accept=".tcx,.xml" multiple hidden>
+    </div>
+  </header>
+
+  <main id="feed"></main>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <form class="entry-form" id="entryForm">
+    <p class="form-title" id="formTitle">記録を書く</p>
+
+    <div class="field">
+      <label for="f-date">日付</label>
+      <input type="date" id="f-date" required>
+    </div>
+
+    <div class="field">
+      <label for="f-dist">距離 (km)</label>
+      <input type="number" id="f-dist" step="0.01" min="0" placeholder="例: 5.20" required>
+    </div>
+
+    <div class="field">
+      <label>時間</label>
+      <div class="time-row">
+        <div class="t-field"><input type="number" id="f-h" min="0" placeholder="0" aria-label="時"></div>
+        <span class="t-sep">時間</span>
+        <div class="t-field"><input type="number" id="f-m" min="0" max="59" placeholder="0" aria-label="分"></div>
+        <span class="t-sep">分</span>
+        <div class="t-field"><input type="number" id="f-s" min="0" max="59" placeholder="0" aria-label="秒"></div>
+        <span class="t-sep">秒</span>
+      </div>
+      <div class="pace-preview" id="pacePreview"></div>
+    </div>
+
+    <div class="field">
+      <label for="f-hr">平均心拍数 (bpm・任意)</label>
+      <input type="number" id="f-hr" min="0" placeholder="例: 152">
+    </div>
+
+    <div class="field">
+      <label for="f-course">コース名 (任意)</label>
+      <input type="text" id="f-course" placeholder="例: 河川敷いつものコース">
+    </div>
+
+    <div class="field">
+      <label for="f-weather">天気 (任意)</label>
+      <select id="f-weather">
+        <option value="">選択なし</option>
+        <option value="☀️ 晴れ">☀️ 晴れ</option>
+        <option value="☁️ 曇り">☁️ 曇り</option>
+        <option value="🌧️ 雨">🌧️ 雨</option>
+        <option value="❄️ 雪">❄️ 雪</option>
+        <option value="💨 強風">💨 強風</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="f-memo">メモ (任意)</label>
+      <textarea id="f-memo" placeholder="体の調子、景色、気づいたことなど"></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" id="cancelBtn">キャンセル</button>
+      <button type="submit" class="btn-save">保存する</button>
+    </div>
+    <button type="button" class="btn-delete hidden" id="deleteBtn">この記録を削除する</button>
+  </form>
+</div>
+
+<div class="overlay hidden" id="importOverlay">
+  <div class="entry-form">
+    <p class="form-title">取り込むデータを選ぶ</p>
+    <p class="import-hint" id="importHint"></p>
+    <div id="importList"></div>
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" id="importCancelBtn">キャンセル</button>
+      <button type="button" class="btn-save" id="importConfirmBtn">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "runningNotebookEntries_v1";
+  var entries = [];
+  var editingId = null;
+  var viewDate = new Date(); // month currently shown in hero
+  viewDate.setDate(1);
+
+  var WEEKDAYS = ["日","月","火","水","木","金","土"];
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      entries = raw ? JSON.parse(raw) : [];
+    }catch(e){ entries = []; }
+  }
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }catch(e){}
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function fmtPace(totalSeconds, km){
+    if(!km || km <= 0 || !totalSeconds) return "--'--\"";
+    var secPerKm = totalSeconds / km;
+    var m = Math.floor(secPerKm / 60);
+    var s = Math.round(secPerKm % 60);
+    if(s === 60){ m += 1; s = 0; }
+    return m + "'" + String(s).padStart(2,"0") + "\"";
+  }
+
+  function fmtTime(totalSeconds){
+    var h = Math.floor(totalSeconds / 3600);
+    var m = Math.floor((totalSeconds % 3600) / 60);
+    var s = totalSeconds % 60;
+    if(h > 0){
+      return h + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+    }
+    return m + ":" + String(s).padStart(2,"0");
+  }
+
+  function monthKey(dateStr){ return dateStr.slice(0,7); } // YYYY-MM
+
+  function renderContour(){
+    var svg = '<svg width="100%" height="100%" viewBox="0 0 400 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M-10 130 Q 60 90 120 120 T 260 100 T 410 130" fill="none" stroke="#5C6B4F" stroke-width="1.5"/>' +
+      '<path d="M-10 145 Q 80 110 150 135 T 300 120 T 410 145" fill="none" stroke="#5C6B4F" stroke-width="1.5"/>' +
+      '<path d="M-10 20 Q 90 55 170 25 T 320 45 T 410 15" fill="none" stroke="#B9C2CE" stroke-width="1"/>' +
+      '<path d="M-10 40 Q 100 70 180 45 T 330 65 T 410 35" fill="none" stroke="#B9C2CE" stroke-width="1"/>' +
+      '</svg>';
+    document.getElementById("contourWrap").innerHTML = svg;
+  }
+
+  function monthEntries(ym){
+    return entries.filter(function(e){ return monthKey(e.date) === ym; });
+  }
+
+  function updateHero(){
+    var ym = viewDate.getFullYear() + "-" + String(viewDate.getMonth()+1).padStart(2,"0");
+    document.getElementById("monthLabel").textContent = viewDate.getFullYear() + "年" + (viewDate.getMonth()+1) + "月";
+
+    var list = monthEntries(ym);
+    var totalDist = 0, totalSec = 0;
+    list.forEach(function(e){ totalDist += e.distanceKm; totalSec += e.seconds; });
+
+    document.getElementById("monthDistance").textContent = totalDist.toFixed(1);
+    document.getElementById("monthCount").textContent = list.length;
+    document.getElementById("monthTime").textContent = fmtTime(totalSec);
+    document.getElementById("monthPace").innerHTML = totalDist > 0 ? fmtPace(totalSec, totalDist) : "--&apos;--&quot;";
+  }
+
+  function renderFeed(){
+    var feed = document.getElementById("feed");
+    feed.innerHTML = "";
+
+    if(entries.length === 0){
+      feed.innerHTML = '<div class="empty-state"><p>まだ記録がありません。<br>走ったら、ここに書き留めよう。</p></div>';
+      return;
+    }
+
+    var sorted = entries.slice().sort(function(a,b){ return b.date.localeCompare(a.date) || b.id.localeCompare(a.id); });
+
+    var groups = {};
+    var order = [];
+    sorted.forEach(function(e){
+      var ym = monthKey(e.date);
+      if(!groups[ym]){ groups[ym] = []; order.push(ym); }
+      groups[ym].push(e);
+    });
+
+    order.forEach(function(ym){
+      var list = groups[ym];
+      var parts = ym.split("-");
+      var totalDist = 0, totalSec = 0;
+      list.forEach(function(e){ totalDist += e.distanceKm; totalSec += e.seconds; });
+
+      var divider = document.createElement("div");
+      divider.className = "month-divider";
+      divider.innerHTML = '<h2>' + parts[0] + '年' + parseInt(parts[1],10) + '月</h2>' +
+        '<span class="m-sum">' + totalDist.toFixed(1) + 'km ・ ' + list.length + '回</span>';
+      feed.appendChild(divider);
+
+      list.forEach(function(e){
+        var d = new Date(e.date + "T00:00:00");
+        var el = document.createElement("div");
+        el.className = "entry";
+        el.innerHTML =
+          '<div class="entry-date"><div class="d">' + d.getDate() + '</div><div class="w">' + WEEKDAYS[d.getDay()] + '</div></div>' +
+          '<div class="entry-body">' +
+            '<div class="entry-top">' +
+              '<span class="entry-dist">' + e.distanceKm.toFixed(2) + '<small> km</small></span>' +
+              '<span class="entry-meta">' +
+                '<span>' + fmtTime(e.seconds) + '</span>' +
+                '<span>' + fmtPace(e.seconds, e.distanceKm) + '/km</span>' +
+                (e.hr ? '<span>♥ ' + e.hr + ' bpm</span>' : '') +
+                (e.weather ? '<span>' + e.weather + '</span>' : '') +
+              '</span>' +
+            '</div>' +
+            (e.course ? '<div class="entry-course">' + escapeHtml(e.course) + '</div>' : '') +
+            (e.memo ? '<div class="entry-memo">' + escapeHtml(e.memo) + '</div>' : '') +
+          '</div>';
+        el.addEventListener("click", function(){ openForm(e.id); });
+        feed.appendChild(el);
+      });
+    });
+  }
+
+  function escapeHtml(str){
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML.replace(/\n/g, "<br>");
+  }
+
+  function updatePacePreview(){
+    var dist = parseFloat(document.getElementById("f-dist").value);
+    var h = parseInt(document.getElementById("f-h").value,10) || 0;
+    var m = parseInt(document.getElementById("f-m").value,10) || 0;
+    var s = parseInt(document.getElementById("f-s").value,10) || 0;
+    var totalSec = h*3600 + m*60 + s;
+    var preview = document.getElementById("pacePreview");
+    if(dist > 0 && totalSec > 0){
+      preview.textContent = "ペース " + fmtPace(totalSec, dist) + " /km";
+    } else {
+      preview.textContent = "";
+    }
+  }
+
+  function openForm(id){
+    var overlay = document.getElementById("overlay");
+    var form = document.getElementById("entryForm");
+    form.reset();
+    document.getElementById("pacePreview").textContent = "";
+
+    if(id){
+      editingId = id;
+      var e = entries.find(function(x){ return x.id === id; });
+      document.getElementById("formTitle").textContent = "記録を編集";
+      document.getElementById("f-date").value = e.date;
+      document.getElementById("f-dist").value = e.distanceKm;
+      document.getElementById("f-h").value = Math.floor(e.seconds/3600) || "";
+      document.getElementById("f-m").value = Math.floor((e.seconds%3600)/60) || "";
+      document.getElementById("f-s").value = e.seconds%60 || "";
+      document.getElementById("f-hr").value = e.hr || "";
+      document.getElementById("f-course").value = e.course || "";
+      document.getElementById("f-weather").value = e.weather || "";
+      document.getElementById("f-memo").value = e.memo || "";
+      document.getElementById("deleteBtn").classList.remove("hidden");
+      updatePacePreview();
+    } else {
+      editingId = null;
+      document.getElementById("formTitle").textContent = "記録を書く";
+      var today = new Date();
+      document.getElementById("f-date").value = today.toISOString().slice(0,10);
+      document.getElementById("deleteBtn").classList.add("hidden");
+    }
+    overlay.classList.remove("hidden");
+  }
+
+  function closeForm(){
+    document.getElementById("overlay").classList.add("hidden");
+    editingId = null;
+  }
+
+  function handleSubmit(ev){
+    ev.preventDefault();
+    var date = document.getElementById("f-date").value;
+    var dist = parseFloat(document.getElementById("f-dist").value);
+    var h = parseInt(document.getElementById("f-h").value,10) || 0;
+    var m = parseInt(document.getElementById("f-m").value,10) || 0;
+    var s = parseInt(document.getElementById("f-s").value,10) || 0;
+    var seconds = h*3600 + m*60 + s;
+    var hr = parseInt(document.getElementById("f-hr").value,10) || null;
+    var course = document.getElementById("f-course").value.trim();
+    var weather = document.getElementById("f-weather").value;
+    var memo = document.getElementById("f-memo").value.trim();
+
+    if(!date || !(dist > 0)){ return; }
+
+    if(editingId){
+      var e = entries.find(function(x){ return x.id === editingId; });
+      e.date = date; e.distanceKm = dist; e.seconds = seconds;
+      e.hr = hr; e.course = course; e.weather = weather; e.memo = memo;
+    } else {
+      entries.push({ id: uid(), date: date, distanceKm: dist, seconds: seconds, hr: hr, course: course, weather: weather, memo: memo });
+    }
+    save();
+    closeForm();
+    renderFeed();
+    updateHero();
+  }
+
+  function handleDelete(){
+    if(!editingId) return;
+    entries = entries.filter(function(x){ return x.id !== editingId; });
+    save();
+    closeForm();
+    renderFeed();
+    updateHero();
+  }
+
+  document.getElementById("addBtn").addEventListener("click", function(){ openForm(null); });
+  document.getElementById("cancelBtn").addEventListener("click", closeForm);
+  document.getElementById("overlay").addEventListener("click", function(ev){ if(ev.target.id === "overlay") closeForm(); });
+  document.getElementById("entryForm").addEventListener("submit", handleSubmit);
+  document.getElementById("deleteBtn").addEventListener("click", handleDelete);
+  ["f-dist","f-h","f-m","f-s"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", updatePacePreview);
+  });
+  // ---------- Google Fit (TCX) import ----------
+  var importCandidates = [];
+
+  document.getElementById("importBtn").addEventListener("click", function(){
+    document.getElementById("importInput").click();
+  });
+
+  document.getElementById("importInput").addEventListener("change", function(ev){
+    var files = Array.prototype.slice.call(ev.target.files || []);
+    if(files.length === 0) return;
+    Promise.all(files.map(readFileAsText)).then(function(texts){
+      var all = [];
+      texts.forEach(function(text){
+        try{ all = all.concat(parseTcx(text)); }catch(e){ /* skip unparseable file */ }
+      });
+      ev.target.value = ""; // allow re-selecting same files later
+      openImportPreview(all);
+    });
+  });
+
+  function readFileAsText(file){
+    return new Promise(function(resolve){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ resolve(""); };
+      reader.readAsText(file);
+    });
+  }
+
+  function parseTcx(xmlText){
+    var results = [];
+    var doc;
+    try{ doc = new DOMParser().parseFromString(xmlText, "text/xml"); }catch(e){ return results; }
+    if(!doc || doc.getElementsByTagName("parsererror").length) return results;
+
+    var activities = doc.getElementsByTagName("Activity");
+    for(var i=0; i<activities.length; i++){
+      var act = activities[i];
+      var sport = act.getAttribute("Sport") || "";
+      var idEl = act.getElementsByTagName("Id")[0];
+      var laps = act.getElementsByTagName("Lap");
+      if(laps.length === 0) continue;
+
+      var totalSec = 0, totalDist = 0;
+      var hrWeighted = 0, hrWeight = 0;
+      var startIso = idEl ? idEl.textContent.trim() : laps[0].getAttribute("StartTime");
+
+      for(var j=0; j<laps.length; j++){
+        var lap = laps[j];
+        var t = parseFloat(textOf(lap, "TotalTimeSeconds")) || 0;
+        var d = parseFloat(textOf(lap, "DistanceMeters")) || 0;
+        totalSec += t; totalDist += d;
+        var avgHrEl = lap.getElementsByTagName("AverageHeartRateBpm")[0];
+        if(avgHrEl){
+          var v = parseFloat(textOf(avgHrEl, "Value"));
+          if(v){ hrWeighted += v * (t||1); hrWeight += (t||1); }
+        }
+      }
+      if(totalDist <= 0 || totalSec <= 0) continue;
+
+      var dateObj = startIso ? new Date(startIso) : null;
+      if(!dateObj || isNaN(dateObj.getTime())) continue;
+      var dateStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth()+1).padStart(2,"0") + "-" + String(dateObj.getDate()).padStart(2,"0");
+
+      results.push({
+        date: dateStr,
+        distanceKm: totalDist/1000,
+        seconds: Math.round(totalSec),
+        hr: hrWeight > 0 ? Math.round(hrWeighted/hrWeight) : null,
+        sport: sport
+      });
+    }
+    return results;
+  }
+
+  function textOf(parent, tagName){
+    var el = parent.getElementsByTagName(tagName)[0];
+    return el ? el.textContent : "";
+  }
+
+  function isDuplicate(c){
+    return entries.some(function(e){
+      return e.date === c.date && Math.abs(e.distanceKm - c.distanceKm) < 0.05;
+    });
+  }
+
+  function openImportPreview(candidates){
+    importCandidates = candidates;
+    var list = document.getElementById("importList");
+    var hint = document.getElementById("importHint");
+    list.innerHTML = "";
+
+    if(candidates.length === 0){
+      hint.textContent = "";
+      list.innerHTML = '<div class="import-empty">TCXファイルから記録を読み取れんかった。<br>Google Fitのエクスポートに含まれる「Activities」フォルダ内の.tcxファイルを選んでみて。</div>';
+    } else {
+      hint.textContent = candidates.length + "件見つかった。追加する記録にチェックを入れて「追加する」を押してな。既存の記録と同じ日付・距離のものは自動で外してある。";
+      candidates.forEach(function(c, idx){
+        var dup = isDuplicate(c);
+        var row = document.createElement("label");
+        row.className = "import-row";
+        row.innerHTML =
+          '<input type="checkbox" data-idx="' + idx + '" ' + (dup ? "" : "checked") + '>' +
+          '<div class="ir-main">' +
+            '<div class="ir-date">' + c.date + (dup ? '（登録済み？）' : '') + '</div>' +
+            '<div class="ir-meta">' + c.distanceKm.toFixed(2) + ' km ・ ' + fmtTime(c.seconds) + ' ・ ' + fmtPace(c.seconds, c.distanceKm) + '/km' + (c.hr ? ' ・ ♥' + c.hr : '') + '</div>' +
+            (c.sport ? '<div class="ir-sport">' + escapeHtml(c.sport) + '</div>' : '') +
+          '</div>';
+        list.appendChild(row);
+      });
+    }
+    document.getElementById("importOverlay").classList.remove("hidden");
+  }
+
+  document.getElementById("importCancelBtn").addEventListener("click", function(){
+    document.getElementById("importOverlay").classList.add("hidden");
+  });
+  document.getElementById("importOverlay").addEventListener("click", function(ev){
+    if(ev.target.id === "importOverlay") document.getElementById("importOverlay").classList.add("hidden");
+  });
+  document.getElementById("importConfirmBtn").addEventListener("click", function(){
+    var checks = document.querySelectorAll("#importList input[type=checkbox]:checked");
+    checks.forEach(function(cb){
+      var c = importCandidates[parseInt(cb.getAttribute("data-idx"),10)];
+      entries.push({ id: uid(), date: c.date, distanceKm: c.distanceKm, seconds: c.seconds, hr: c.hr, course: "", weather: "", memo: "" });
+    });
+    save();
+    document.getElementById("importOverlay").classList.add("hidden");
+    renderFeed();
+    updateHero();
+  });
+
+  document.getElementById("prevMonth").addEventListener("click", function(){
+    viewDate.setMonth(viewDate.getMonth()-1); updateHero();
+  });
+  document.getElementById("nextMonth").addEventListener("click", function(){
+    viewDate.setMonth(viewDate.getMonth()+1); updateHero();
+  });
+
+  renderContour();
+  load();
+  renderFeed();
+  updateHero();
+
+  if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
