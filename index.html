@@ -122,6 +122,20 @@
   }
   .import-btn:active{ transform:translateY(1px); }
 
+  .stats-btn{
+    display:block;
+    margin-top:10px;
+    background:none;
+    border:1px solid rgba(237,232,220,.4);
+    color:#D9DEE3;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .stats-btn:active{ transform:translateY(1px); }
+
   .backup-btn{
     display:block;
     margin-top:8px;
@@ -365,6 +379,63 @@
     line-height:1.7;
   }
 
+  /* ---------- Stats ---------- */
+  .stats-section{ margin-bottom:26px; }
+  .stats-section h3{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--indigo);
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  .best-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .best-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:12px 12px 10px;
+  }
+  .best-card .bc-label{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .best-card .bc-value{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:22px;
+    color:var(--tasuki);
+    line-height:1.15;
+  }
+  .best-card .bc-value small{
+    font-size:12px;
+    font-weight:500;
+    color:var(--ink-soft);
+  }
+  .best-card .bc-sub{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:3px;
+  }
+  .stats-empty{
+    font-size:13px;
+    color:var(--ink-soft);
+    line-height:1.7;
+    padding:8px 2px 20px;
+  }
+  .chart-wrap{ width:100%; }
+  .chart-caption{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
   @media (min-width:480px){
     .hero-number{ font-size:76px; }
   }
@@ -390,6 +461,7 @@
       </div>
       <button class="add-btn" id="addBtn">＋ 記録を書く</button>
       <button class="import-btn" id="importBtn">Google Fitから読み込む</button>
+      <button class="stats-btn" id="statsBtn">統計を見る</button>
       <button class="backup-btn" id="backupBtn">データのバックアップ・復元</button>
       <input type="file" id="importInput" accept=".tcx,.xml" multiple hidden>
       <input type="file" id="restoreInput" accept=".json" hidden>
@@ -482,6 +554,16 @@
       <button type="button" class="btn-save" id="backupExportBtn">書き出す</button>
     </div>
     <button type="button" class="btn-delete" id="backupRestoreBtn">バックアップファイルから復元する</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="statsOverlay">
+  <div class="entry-form">
+    <p class="form-title">統計</p>
+    <div id="statsContent"></div>
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" id="statsCloseBtn" style="flex:none; width:100%;">閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -899,6 +981,136 @@
       document.getElementById("backupOverlay").classList.add("hidden");
     };
     reader.readAsText(file);
+  });
+
+  // ---------- Stats: trends & personal bests ----------
+  var BEST_BUCKETS = [
+    { key:"5km",  label:"5km級",   target:5,       tol:0.3 },
+    { key:"10km", label:"10km級",  target:10,      tol:0.5 },
+    { key:"half", label:"ハーフ級", target:21.0975, tol:1.5 },
+    { key:"full", label:"フル級",   target:42.195,  tol:2.0 }
+  ];
+
+  function computeBests(){
+    if(entries.length === 0) return null;
+    var longest = entries.reduce(function(a,b){ return b.distanceKm > a.distanceKm ? b : a; });
+    var pacedCandidates = entries.filter(function(e){ return e.distanceKm >= 1; });
+    var fastestPace = pacedCandidates.length ? pacedCandidates.reduce(function(a,b){
+      return (b.seconds/b.distanceKm) < (a.seconds/a.distanceKm) ? b : a;
+    }) : null;
+
+    var buckets = BEST_BUCKETS.map(function(b){
+      var matches = entries.filter(function(e){ return Math.abs(e.distanceKm - b.target) <= b.tol; });
+      if(matches.length === 0) return null;
+      var best = matches.reduce(function(a,c){ return c.seconds < a.seconds ? c : a; });
+      return { label:b.label, entry:best };
+    }).filter(Boolean);
+
+    return { longest:longest, fastestPace:fastestPace, buckets:buckets };
+  }
+
+  function computeMonthlyStats(limit){
+    var groups = {};
+    entries.forEach(function(e){
+      var ym = monthKey(e.date);
+      if(!groups[ym]) groups[ym] = { ym:ym, totalDist:0, totalSec:0, count:0 };
+      groups[ym].totalDist += e.distanceKm;
+      groups[ym].totalSec += e.seconds;
+      groups[ym].count += 1;
+    });
+    var list = Object.keys(groups).sort().map(function(k){ return groups[k]; });
+    if(limit) list = list.slice(-limit);
+    return list;
+  }
+
+  function svgBarChart(months){
+    var w = 300, h = 130, padB = 20, padT = 10, padL = 4, padR = 4;
+    var max = Math.max.apply(null, months.map(function(m){ return m.totalDist; })) || 1;
+    var n = months.length;
+    var slotW = (w - padL - padR) / n;
+    var barW = Math.min(28, slotW * 0.55);
+    var bars = "", labels = "";
+    months.forEach(function(m, i){
+      var x = padL + slotW * i + (slotW - barW)/2;
+      var barH = (h - padT - padB) * (m.totalDist / max);
+      var y = h - padB - barH;
+      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(2,barH).toFixed(1) + '" fill="#B33C28" rx="2"/>';
+      bars += '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (y - 4).toFixed(1) + '" font-size="9" fill="#2B2823" text-anchor="middle" font-family="Zen Kaku Gothic New, sans-serif">' + m.totalDist.toFixed(1) + '</text>';
+      var lbl = m.ym.slice(5,7).replace(/^0/,"") + "月";
+      labels += '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (h - 5) + '" font-size="9" fill="#6B6558" text-anchor="middle" font-family="Zen Kaku Gothic New, sans-serif">' + lbl + '</text>';
+    });
+    return '<svg class="chart-wrap" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg">' + bars + labels + '</svg>';
+  }
+
+  function svgPaceLine(months){
+    var withPace = months.filter(function(m){ return m.totalDist > 0; });
+    if(withPace.length < 2){
+      return '<p class="stats-empty">グラフを描くにはあと数ヶ月分のデータが必要やで。</p>';
+    }
+    var w = 300, h = 130, padB = 20, padT = 14, padL = 8, padR = 8;
+    var paces = withPace.map(function(m){ return (m.totalSec / m.totalDist); }); // sec/km, lower = faster
+    var maxP = Math.max.apply(null, paces), minP = Math.min.apply(null, paces);
+    var range = (maxP - minP) || 1;
+    var n = withPace.length;
+    var slotW = (w - padL - padR) / (n - 1 || 1);
+    var pts = withPace.map(function(m, i){
+      var pace = m.totalSec / m.totalDist;
+      var x = padL + slotW * i;
+      var norm = (pace - minP) / range; // 0 = fastest, 1 = slowest
+      var y = padT + norm * (h - padT - padB);
+      return { x:x, y:y, pace:pace, ym:m.ym };
+    });
+    var path = pts.map(function(p,i){ return (i===0?"M":"L") + p.x.toFixed(1) + " " + p.y.toFixed(1); }).join(" ");
+    var dots = pts.map(function(p){
+      return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="#223148"/>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 7).toFixed(1) + '" font-size="9" fill="#2B2823" text-anchor="middle" font-family="Zen Kaku Gothic New, sans-serif">' + fmtPace(p.pace,1) + '</text>';
+    }).join("");
+    var labels = pts.map(function(p){
+      var lbl = p.ym.slice(5,7).replace(/^0/,"") + "月";
+      return '<text x="' + p.x.toFixed(1) + '" y="' + (h-5) + '" font-size="9" fill="#6B6558" text-anchor="middle" font-family="Zen Kaku Gothic New, sans-serif">' + lbl + '</text>';
+    }).join("");
+    return '<svg class="chart-wrap" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="' + path + '" fill="none" stroke="#5C6B4F" stroke-width="1.5"/>' + dots + labels + '</svg>';
+  }
+
+  function renderStats(){
+    var el = document.getElementById("statsContent");
+    if(entries.length === 0){
+      el.innerHTML = '<p class="stats-empty">記録がまだないから、走ったらここに自己ベストや推移が出てくるで。</p>';
+      return;
+    }
+
+    var bests = computeBests();
+    var months = computeMonthlyStats(8);
+
+    var html = "";
+
+    html += '<div class="stats-section"><h3>自己ベスト</h3><div class="best-grid">';
+    html += '<div class="best-card"><div class="bc-label">最長距離</div><div class="bc-value">' + bests.longest.distanceKm.toFixed(2) + '<small> km</small></div><div class="bc-sub">' + bests.longest.date + '</div></div>';
+    if(bests.fastestPace){
+      html += '<div class="best-card"><div class="bc-label">最速ペース</div><div class="bc-value">' + fmtPace(bests.fastestPace.seconds, bests.fastestPace.distanceKm) + '<small> /km</small></div><div class="bc-sub">' + bests.fastestPace.date + '・' + bests.fastestPace.distanceKm.toFixed(1) + 'km</div></div>';
+    }
+    bests.buckets.forEach(function(b){
+      html += '<div class="best-card"><div class="bc-label">' + b.label + 'ベスト</div><div class="bc-value">' + fmtTime(b.entry.seconds) + '</div><div class="bc-sub">' + b.entry.date + '・' + b.entry.distanceKm.toFixed(2) + 'km</div></div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="stats-section"><h3>月間走行距離</h3>' + svgBarChart(months) + '<div class="chart-caption">直近' + months.length + 'ヶ月・単位 km</div></div>';
+
+    html += '<div class="stats-section"><h3>月間平均ペースの推移</h3>' + svgPaceLine(months) + '<div class="chart-caption">上にいくほど速い(/km)</div></div>';
+
+    el.innerHTML = html;
+  }
+
+  document.getElementById("statsBtn").addEventListener("click", function(){
+    renderStats();
+    document.getElementById("statsOverlay").classList.remove("hidden");
+  });
+  document.getElementById("statsCloseBtn").addEventListener("click", function(){
+    document.getElementById("statsOverlay").classList.add("hidden");
+  });
+  document.getElementById("statsOverlay").addEventListener("click", function(ev){
+    if(ev.target.id === "statsOverlay") document.getElementById("statsOverlay").classList.add("hidden");
   });
 
   document.getElementById("prevMonth").addEventListener("click", function(){
