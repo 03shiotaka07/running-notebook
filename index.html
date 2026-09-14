@@ -122,6 +122,19 @@
   }
   .import-btn:active{ transform:translateY(1px); }
 
+  .backup-btn{
+    display:block;
+    margin-top:8px;
+    background:none;
+    border:none;
+    color:#9AA4B2;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:12px;
+    text-decoration:underline;
+    padding:6px 4px;
+    cursor:pointer;
+  }
+
   /* ---------- Feed ---------- */
   main{ padding:6px 0 60px; max-width:640px; margin:0 auto; }
 
@@ -377,7 +390,9 @@
       </div>
       <button class="add-btn" id="addBtn">＋ 記録を書く</button>
       <button class="import-btn" id="importBtn">Google Fitから読み込む</button>
+      <button class="backup-btn" id="backupBtn">データのバックアップ・復元</button>
       <input type="file" id="importInput" accept=".tcx,.xml" multiple hidden>
+      <input type="file" id="restoreInput" accept=".json" hidden>
     </div>
   </header>
 
@@ -455,6 +470,18 @@
       <button type="button" class="btn-cancel" id="importCancelBtn">キャンセル</button>
       <button type="button" class="btn-save" id="importConfirmBtn">追加する</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="backupOverlay">
+  <div class="entry-form">
+    <p class="form-title">データのバックアップ・復元</p>
+    <p class="import-hint">記録はすべてこの端末のブラウザ内(localStorage)に保存されてる。サイトのデータを消す操作をする前や、機種変更の前にバックアップしておくと安心。</p>
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" id="backupCancelBtn">閉じる</button>
+      <button type="button" class="btn-save" id="backupExportBtn">書き出す</button>
+    </div>
+    <button type="button" class="btn-delete" id="backupRestoreBtn">バックアップファイルから復元する</button>
   </div>
 </div>
 
@@ -817,6 +844,61 @@
     document.getElementById("importOverlay").classList.add("hidden");
     renderFeed();
     updateHero();
+  });
+
+  // ---------- Backup / restore ----------
+  document.getElementById("backupBtn").addEventListener("click", function(){
+    document.getElementById("backupOverlay").classList.remove("hidden");
+  });
+  document.getElementById("backupCancelBtn").addEventListener("click", function(){
+    document.getElementById("backupOverlay").classList.add("hidden");
+  });
+  document.getElementById("backupOverlay").addEventListener("click", function(ev){
+    if(ev.target.id === "backupOverlay") document.getElementById("backupOverlay").classList.add("hidden");
+  });
+
+  document.getElementById("backupExportBtn").addEventListener("click", function(){
+    var data = JSON.stringify(entries, null, 2);
+    var blob = new Blob([data], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var today = new Date();
+    var stamp = today.getFullYear() + String(today.getMonth()+1).padStart(2,"0") + String(today.getDate()).padStart(2,"0");
+    a.href = url;
+    a.download = "running-notebook-backup-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  });
+
+  document.getElementById("backupRestoreBtn").addEventListener("click", function(){
+    document.getElementById("restoreInput").click();
+  });
+  document.getElementById("restoreInput").addEventListener("change", function(ev){
+    var file = ev.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var parsed;
+      try{ parsed = JSON.parse(reader.result); }catch(e){ parsed = null; }
+      ev.target.value = "";
+      if(!Array.isArray(parsed)){
+        alert("このファイルは読み込めんかった。バックアップ用のjsonファイルを選んでな。");
+        return;
+      }
+      var replace = confirm("現在の記録 " + entries.length + "件を、バックアップの " + parsed.length + "件で置き換える。よろしいか?\n(キャンセルすると追加読み込みになる)");
+      if(replace){
+        entries = parsed;
+      } else {
+        parsed.forEach(function(p){ if(!entries.some(function(e){ return e.id === p.id; })) entries.push(p); });
+      }
+      save();
+      renderFeed();
+      updateHero();
+      document.getElementById("backupOverlay").classList.add("hidden");
+    };
+    reader.readAsText(file);
   });
 
   document.getElementById("prevMonth").addEventListener("click", function(){

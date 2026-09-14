@@ -1,4 +1,4 @@
-const CACHE_NAME = "running-notebook-v2";
+const CACHE_NAME = "running-notebook-v3";
 const SHARE_CACHE = "running-notebook-share-v1";
 const ASSETS = ["./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
@@ -25,6 +25,19 @@ self.addEventListener("fetch", (event) => {
   // Android share sheet posts the shared file(s) here.
   if (req.method === "POST" && url.pathname.endsWith("/share-target.html")) {
     event.respondWith(handleShareTarget(req));
+    return;
+  }
+
+  // manifest.json must always be fresh so Chrome can pick up share_target
+  // changes -- never let a stale cached copy answer this request.
+  if (url.pathname.endsWith("/manifest.json")) {
+    event.respondWith(
+      fetch(req, { cache: "no-store" }).then((res) => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        return res;
+      }).catch(() => caches.match(req))
+    );
     return;
   }
 
