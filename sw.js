@@ -1,4 +1,4 @@
-const CACHE_NAME = "running-notebook-v3";
+const CACHE_NAME = "running-notebook-v4";
 const SHARE_CACHE = "running-notebook-share-v1";
 const ASSETS = ["./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
@@ -28,8 +28,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // manifest.json must always be fresh so Chrome can pick up share_target
-  // changes -- never let a stale cached copy answer this request.
+  // manifest.json: always fresh from network (share_target etc. must never be stale).
   if (url.pathname.endsWith("/manifest.json")) {
     event.respondWith(
       fetch(req, { cache: "no-store" }).then((res) => {
@@ -41,14 +40,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigations always get the cached app shell (keeps ?shared=1 etc. in the URL).
+  // Navigations (opening the app / index.html): network-first so edits show up
+  // immediately, falling back to the cached shell only when offline.
   if (req.mode === "navigate") {
     event.respondWith(
-      caches.match("./index.html").then((cached) => cached || fetch(req))
+      fetch(req, { cache: "no-store" }).then((res) => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", resClone));
+        return res;
+      }).catch(() => caches.match("./index.html"))
     );
     return;
   }
 
+  // Everything else (icons, fonts, etc.): cache-first, fine since they rarely change.
   event.respondWith(
     caches.match(req).then((cached) => {
       return cached || fetch(req).then((res) => {
