@@ -834,6 +834,28 @@
   if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
     navigator.serviceWorker.register("sw.js").catch(function(){});
   }
+
+  // If we were opened via the Android share sheet (Google Fit -> 共有 -> ランニング手帖),
+  // the service worker stashed the shared file(s) in a cache; pick them up here.
+  if(location.search.indexOf("shared=1") !== -1 && "caches" in window){
+    caches.open("running-notebook-share-v1").then(function(cache){
+      return cache.match("shared-data").then(function(res){
+        if(!res) return null;
+        return res.json().then(function(texts){
+          cache.delete("shared-data");
+          return texts;
+        });
+      });
+    }).then(function(texts){
+      history.replaceState(null, "", location.pathname);
+      if(!texts || texts.length === 0) return;
+      var all = [];
+      texts.forEach(function(text){
+        try{ all = all.concat(parseTcx(text)); }catch(e){}
+      });
+      openImportPreview(all);
+    }).catch(function(){});
+  }
 })();
 </script>
 </body>
